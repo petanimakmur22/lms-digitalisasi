@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin Dashboard — Workshop Digitalisasi Pembelajaran</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #F9F3E5; --text: #1A1A1A; --muted: #6B6B6B;
+      --indigo: #4F46E5; --amber: #F59E0B; --coral: #EF4444;
+      --green: #22C55E; --font: 'Space Grotesk', system-ui, sans-serif;
+    }
+    html { font-family: var(--font); background: var(--bg); color: var(--text); }
+    body { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; flex-wrap: wrap; gap: 16px; }
+    .header h1 { font-size: 28px; font-weight: 700; }
+    .header .mode-badge { padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+    .mode-firebase { background: var(--green); color: white; }
+    .mode-local { background: var(--amber); color: var(--text); }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .stat-card { background: white; border-radius: 16px; padding: 20px; text-align: center; }
+    .stat-card .value { font-size: 36px; font-weight: 700; color: var(--indigo); }
+    .stat-card .label { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+    .section-title { font-size: 20px; font-weight: 700; margin-bottom: 16px; }
+    
+    .search-bar { width: 100%; padding: 12px 16px; border: 2px solid rgba(0,0,0,0.08); border-radius: 12px; font-family: var(--font); font-size: 14px; background: white; margin-bottom: 16px; outline: none; }
+    .search-bar:focus { border-color: var(--indigo); }
+
+    table { width: 100%; border-collapse: collapse; background: white; border-radius: 16px; overflow: hidden; }
+    thead th { background: var(--indigo); color: white; padding: 12px 16px; text-align: left; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+    tbody td { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; font-size: 14px; vertical-align: middle; }
+    tbody tr:hover { background: #FEFBF3; }
+    tbody tr:last-child td { border-bottom: none; }
+
+    .progress-mini { width: 80px; height: 6px; background: #e5e5e5; border-radius: 999px; display: inline-block; vertical-align: middle; margin-right: 6px; }
+    .progress-mini-fill { height: 100%; border-radius: 999px; background: var(--indigo); }
+    
+    .badge-sm { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+    .badge-done { background: #DCFCE7; color: #166534; }
+    .badge-progress { background: #FEF3C7; color: #92400E; }
+    .badge-notstarted { background: #F3F4F6; color: #6B7280; }
+    .badge-cert { background: #EDE9FE; color: #5B21B6; }
+
+    .btn { padding: 10px 20px; border: none; border-radius: 999px; font-family: var(--font); font-weight: 600; font-size: 14px; cursor: pointer; }
+    .btn-primary { background: var(--text); color: white; }
+    .btn-export { background: var(--green); color: white; }
+    .btn:hover { opacity: 0.9; }
+
+    .toolbar { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+    .toolbar .count { font-size: 14px; color: var(--muted); margin-left: auto; }
+
+    .empty-state { text-align: center; padding: 48px; color: var(--muted); }
+    .empty-state .emoji { font-size: 64px; margin-bottom: 12px; }
+
+    .activity-list { display: flex; flex-direction: column; gap: 8px; }
+    .activity-item { background: white; border-radius: 12px; padding: 12px 16px; display: flex; gap: 12px; align-items: center; font-size: 13px; }
+    .activity-icon { font-size: 20px; }
+    .activity-time { color: var(--muted); font-size: 11px; margin-left: auto; white-space: nowrap; }
+
+    .tabs { display: flex; gap: 4px; margin-bottom: 24px; background: white; border-radius: 12px; padding: 4px; }
+    .tab { flex: 1; padding: 10px; text-align: center; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; background: none; font-family: var(--font); color: var(--muted); }
+    .tab.active { background: var(--indigo); color: white; }
+
+    @media (max-width: 768px) {
+      body { padding: 16px; }
+      .header h1 { font-size: 22px; }
+      table { font-size: 12px; }
+      thead th, tbody td { padding: 8px 10px; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>📊 Admin Dashboard</h1>
+      <div style="font-size:14px;color:var(--muted);margin-top:4px;">Workshop Digitalisasi Pembelajaran</div>
+    </div>
+    <div id="modeBadge"></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('peserta')">👥 Peserta</button>
+    <button class="tab" onclick="showTab('activity')">📋 Aktivitas</button>
+  </div>
+
+  <div id="tab-peserta">
+    <div class="stats-grid" id="statsGrid"></div>
+    <div class="section-title">Data Peserta</div>
+    <div class="toolbar">
+      <input type="text" class="search-bar" style="flex:1;margin-bottom:0" placeholder="🔍 Cari nama, email, atau instansi..." id="searchInput" oninput="filterTable()">
+      <button class="btn btn-export" onclick="exportCSV()">📥 Export CSV</button>
+      <button class="btn btn-primary" onclick="refreshData()">🔄 Refresh</button>
+      <div class="count" id="rowCount"></div>
+    </div>
+    <div style="overflow-x:auto;border-radius:16px;">
+      <table>
+        <thead>
+          <tr>
+            <th>No</th>
+            <th>Nama</th>
+            <th>Email</th>
+            <th>Instansi</th>
+            <th>Peran</th>
+            <th>Terdaftar</th>
+            <th>Progress</th>
+            <th>M1</th>
+            <th>M2</th>
+            <th>M3</th>
+            <th>Sertifikat</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr><td colspan="11" class="empty-state"><div class="emoji">⏳</div>Memuat data...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="tab-activity" style="display:none;">
+    <div class="section-title">Log Aktivitas Terbaru</div>
+    <div id="activityList" class="activity-list">
+      <div class="empty-state"><div class="emoji">⏳</div>Memuat...</div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/data.js"></script>
+  <script src="js/sheets-config.js"></script>
+  <script src="js/db.js"></script>
+
+  <script>
+    let allData = [];
+
+    function showTab(tab) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById('tab-peserta').style.display = tab === 'peserta' ? '' : 'none';
+      document.getElementById('tab-activity').style.display = tab === 'activity' ? '' : 'none';
+      if (tab === 'activity') loadActivity();
+    }
+
+    async function init() {
+      await DB.init();
+      document.getElementById('modeBadge').innerHTML = DB.isSheetsMode()
+        ? '<span class="mode-badge mode-firebase">📊 Google Sheets Connected</span>'
+        : '<span class="mode-badge mode-local">💾 Mode LocalStorage</span>';
+      await refreshData();
+    }
+
+    async function refreshData() {
+      try {
+        allData = await DB.getAllUsersWithProgress();
+        renderStats();
+        renderTable(allData);
+      } catch (err) {
+        document.getElementById('tableBody').innerHTML = 
+          `<tr><td colspan="11" class="empty-state"><div class="emoji">❌</div>${err.message}</td></tr>`;
+      }
+    }
+
+    function renderStats() {
+      const total = allData.length;
+      const completed = allData.filter(d => d.progress.certificateEarned).length;
+      const inProgress = allData.filter(d => {
+        const p = d.progress;
+        const started = Object.values(p.modules).some(m => m.materialsCompleted.length > 0);
+        return started && !p.certificateEarned;
+      }).length;
+      const notStarted = total - completed - inProgress;
+
+      const avgProgress = total > 0 
+        ? Math.round(allData.reduce((sum, d) => {
+            let done = 0, tot = 0;
+            MODULES.forEach(m => { tot += m.materials.length; done += d.progress.modules[m.id].materialsCompleted.length; });
+            return sum + (tot > 0 ? (done/tot)*100 : 0);
+          }, 0) / total)
+        : 0;
+
+      document.getElementById('statsGrid').innerHTML = `
+        <div class="stat-card"><div class="value">${total}</div><div class="label">Total Peserta</div></div>
+        <div class="stat-card"><div class="value" style="color:var(--green)">${completed}</div><div class="label">Sudah Lulus</div></div>
+        <div class="stat-card"><div class="value" style="color:var(--amber)">${inProgress}</div><div class="label">Sedang Berjalan</div></div>
+        <div class="stat-card"><div class="value" style="color:var(--muted)">${notStarted}</div><div class="label">Belum Mulai</div></div>
+        <div class="stat-card"><div class="value">${avgProgress}%</div><div class="label">Rata-rata Progress</div></div>
+      `;
+    }
+
+    function renderTable(data) {
+      if (data.length === 0) {
+        document.getElementById('tableBody').innerHTML = 
+          '<tr><td colspan="11" class="empty-state"><div class="emoji">📭</div>Belum ada peserta terdaftar</td></tr>';
+        document.getElementById('rowCount').textContent = '0 peserta';
+        return;
+      }
+
+      const rows = data.map((d, i) => {
+        const u = d.user;
+        const p = d.progress;
+        let totalMat = 0, doneMat = 0;
+        MODULES.forEach(m => { totalMat += m.materials.length; doneMat += p.modules[m.id].materialsCompleted.length; });
+        const pct = Math.round((doneMat / totalMat) * 100);
+
+        const regDate = u.registeredAt ? new Date(u.registeredAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+
+        const moduleStatus = (modId) => {
+          const m = p.modules[modId];
+          if (m.completed) return '<span class="badge-sm badge-done">✅ Lulus</span>';
+          if (m.materialsCompleted.length > 0) {
+            const mod = MODULES.find(x => x.id === modId);
+            return `<span class="badge-sm badge-progress">${m.materialsCompleted.length}/${mod.materials.length}</span>`;
+          }
+          return '<span class="badge-sm badge-notstarted">—</span>';
+        };
+
+        const certBadge = p.certificateEarned 
+          ? '<span class="badge-sm badge-cert">🏆 Ya</span>'
+          : '<span class="badge-sm badge-notstarted">—</span>';
+
+        return `<tr>
+          <td>${i+1}</td>
+          <td><strong>${u.name || '-'}</strong></td>
+          <td>${u.email || '-'}</td>
+          <td>${u.institution || '-'}</td>
+          <td>${u.role || '-'}</td>
+          <td>${regDate}</td>
+          <td><span class="progress-mini"><span class="progress-mini-fill" style="width:${pct}%"></span></span>${pct}%</td>
+          <td>${moduleStatus(1)}</td>
+          <td>${moduleStatus(2)}</td>
+          <td>${moduleStatus(3)}</td>
+          <td>${certBadge}</td>
+        </tr>`;
+      }).join('');
+
+      document.getElementById('tableBody').innerHTML = rows;
+      document.getElementById('rowCount').textContent = `${data.length} peserta`;
+    }
+
+    function filterTable() {
+      const q = document.getElementById('searchInput').value.toLowerCase();
+      const filtered = allData.filter(d => {
+        const u = d.user;
+        return (u.name||'').toLowerCase().includes(q) 
+            || (u.email||'').toLowerCase().includes(q) 
+            || (u.institution||'').toLowerCase().includes(q);
+      });
+      renderTable(filtered);
+    }
+
+    function exportCSV() {
+      if (allData.length === 0) return alert('Tidak ada data untuk di-export');
+      
+      const headers = ['No', 'Nama', 'Email', 'Instansi', 'Peran', 'Terdaftar', 'Progress%', 
+        'Modul1_Status', 'Modul1_Skor', 'Modul2_Status', 'Modul2_Skor', 'Modul3_Status', 'Modul3_Skor', 'Sertifikat', 'Tgl_Sertifikat'];
+      
+      const rows = allData.map((d, i) => {
+        const u = d.user;
+        const p = d.progress;
+        let totalMat = 0, doneMat = 0;
+        MODULES.forEach(m => { totalMat += m.materials.length; doneMat += p.modules[m.id].materialsCompleted.length; });
+        const pct = Math.round((doneMat / totalMat) * 100);
+
+        const modStatus = (id) => p.modules[id].completed ? 'Lulus' : (p.modules[id].materialsCompleted.length > 0 ? 'Sedang' : 'Belum');
+        const modScore = (id) => p.modules[id].quizScore !== null ? `${p.modules[id].quizScore}/${MODULES.find(m=>m.id===id).quiz.length}` : '-';
+
+        return [
+          i+1, u.name, u.email, u.institution, u.role,
+          u.registeredAt ? new Date(u.registeredAt).toLocaleDateString('id-ID') : '-',
+          pct,
+          modStatus(1), modScore(1),
+          modStatus(2), modScore(2),
+          modStatus(3), modScore(3),
+          p.certificateEarned ? 'Ya' : 'Tidak',
+          p.certificateDate ? new Date(p.certificateDate).toLocaleDateString('id-ID') : '-'
+        ];
+      });
+
+      const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `peserta_workshop_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    async function loadActivity() {
+      const list = document.getElementById('activityList');
+      try {
+        const logs = await DB.getActivityLog(50);
+        if (logs.length === 0) {
+          list.innerHTML = '<div class="empty-state"><div class="emoji">📭</div>Belum ada aktivitas</div>';
+          return;
+        }
+        const icons = {
+          'material_completed': '📖',
+          'quiz_completed': '📝',
+          'certificate_earned': '🏆'
+        };
+        const labels = {
+          'material_completed': 'Menyelesaikan materi',
+          'quiz_completed': 'Menyelesaikan kuis',
+          'certificate_earned': 'Mendapat sertifikat'
+        };
+        list.innerHTML = logs.map(l => {
+          const time = l.timestamp ? new Date(l.timestamp).toLocaleString('id-ID') : '-';
+          const detail = l.data ? (l.data.moduleId ? ` Modul ${l.data.moduleId}` : '') + (l.data.score !== undefined ? ` (${l.data.score}/${l.data.total})` : '') : '';
+          return `<div class="activity-item">
+            <div class="activity-icon">${icons[l.type] || '📌'}</div>
+            <div><strong>${l.userName || 'Unknown'}</strong> — ${labels[l.type] || l.type}${detail}</div>
+            <div class="activity-time">${time}</div>
+          </div>`;
+        }).join('');
+      } catch (err) {
+        list.innerHTML = `<div class="empty-state"><div class="emoji">⚠️</div>${err.message}</div>`;
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
